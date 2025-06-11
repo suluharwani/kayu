@@ -74,4 +74,5 @@ public function getLaporanMutasi($start_date, $end_date)
         ->orderBy('tanggal_transaksi', 'DESC')
         ->findAll();
 }
+
 }

@@ -47,4 +47,25 @@ class KayuModel extends Model
             ->where('id_kayu', $id_kayu)
             ->countAllResults() > 0;
     }
+    public function getKayuWithStock()
+{
+    return $this->select('kayu.*, jenis_kayu.nama_jenis')
+        ->join('jenis_kayu', 'jenis_kayu.id_jenis = kayu.id_jenis')
+        ->join('stock', 'stock.id_kayu = kayu.id_kayu')
+        ->where('stock.quantity >', 0)
+        ->groupBy('kayu.id_kayu')
+        ->findAll();
+}
+
+
+public function getStockByGudang($id_kayu, $id_gudang)
+{
+    $stock = $this->db->table('stock')
+        ->where('id_kayu', $id_kayu)
+        ->where('id_gudang', $id_gudang)
+        ->get()
+        ->getRowArray();
+    
+    return $stock ? $stock['quantity'] : 0;
+}
 }

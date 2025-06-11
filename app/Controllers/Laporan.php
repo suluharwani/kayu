@@ -89,4 +89,48 @@ class Laporan extends BaseController
         $dompdf->render();
         $dompdf->stream("laporan-{$type}.pdf", ['Attachment' => false]);
     }
+    private function transaksiPdf()
+{
+    $start_date = $this->request->getGet('start_date') ?? date('Y-m-01');
+    $end_date = $this->request->getGet('end_date') ?? date('Y-m-t');
+    $jenis = $this->request->getGet('jenis') ?? 'all';
+
+    $data = [
+        'transaksi' => $this->transaksiModel->getLaporanTransaksi($start_date, $end_date, $jenis),
+        'start_date' => $start_date,
+        'end_date' => $end_date,
+        'jenis' => $jenis
+    ];
+
+    return view('laporan/pdf/transaksi_pdf', $data);
+}
+
+private function stockPdf()
+{
+    $id_gudang = $this->request->getGet('id_gudang') ?? 'all';
+    $kategori = $this->request->getGet('kategori') ?? 'all';
+
+    $data = [
+        'stock' => $this->stockModel->getLaporanStock($id_gudang, $kategori),
+        'gudang' => $this->stockModel->getGudangList(),
+        'selected_gudang' => $id_gudang,
+        'kategori' => $kategori
+    ];
+
+    return view('laporan/pdf/stock_pdf', $data);
+}
+
+private function mutasiPdf()
+{
+    $start_date = $this->request->getGet('start_date') ?? date('Y-m-01');
+    $end_date = $this->request->getGet('end_date') ?? date('Y-m-t');
+
+    $data = [
+        'mutasi' => $this->transaksiModel->getLaporanMutasi($start_date, $end_date),
+        'start_date' => $start_date,
+        'end_date' => $end_date
+    ];
+
+    return view('laporan/pdf/mutasi_pdf', $data);
+}
 }

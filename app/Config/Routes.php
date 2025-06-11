@@ -7,6 +7,13 @@ use CodeIgniter\Router\RouteCollection;
  */
 $routes->get('/', 'Home::index');
 $routes->group('', ['filter' => 'auth'], function ($routes) {
+    $routes->get('laporan/', 'Laporan::index');
+    $routes->get('laporan/transaksi', 'Laporan::transaksi');
+    $routes->get('laporan/stock', 'Laporan::stock');
+    $routes->get('laporan/mutasi', 'Laporan::mutasi');
+    $routes->get('laporan/print/(:segment)', 'Laporan::printLaporan/$1');
+
+
     $routes->get('pengguna', 'Pengguna::index');
     $routes->get('pengguna/create', 'Pengguna::create');
     $routes->post('pengguna/store', 'Pengguna::store');
