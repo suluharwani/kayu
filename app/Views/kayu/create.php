@@ -42,7 +42,7 @@
                         </div>
                         
                         <div class="form-group row">
-                            <label for="grade" class="col-sm-2 col-form-label">Grade</label>
+                            <label for="grade" class="col-sm-2 col-form-label">Part</label>
                             <div class="col-sm-10">
                                 <input type="text" class="form-control" id="grade" name="grade" required>
                             </div>

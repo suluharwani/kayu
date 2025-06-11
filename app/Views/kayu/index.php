@@ -34,7 +34,7 @@
                                     <th>Jenis Kayu</th>
                                     <th>Dimensi (cm)</th>
                                     <th>Volume (m3)</th>
-                                    <th>Grade</th>
+                                    <th>Part</th>
                                     <th>Kualitas</th>
                                     <th width="15%">Aksi</th>
                                 </tr>

@@ -1,76 +1,104 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>QR Code <?= $kayu['kode_kayu'] ?></title>
+    <title>Label Kayu</title>
     <style>
         @page {
-            margin: 0;
-            padding: 0;
-            size: 57mm 32mm; /* Ukuran label */
+            size: A4;
+            margin: 10mm;
         }
         body {
-            margin: 0;
-            padding: 2mm;
             font-family: Arial, sans-serif;
-            width: 57mm;
-            height: 32mm;
-            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
-        .label-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-            height: 100%;
-            border: 1px dashed #ccc; /* Garis bantu untuk pemotongan */
+
+        .label {
+            display: inline-block;
+            width: 50mm;
+            height: 45mm;
+            margin: 2mm;
+            border: 1px dashed #ccc;
             padding: 2mm;
+            box-sizing: border-box;
+            vertical-align: top;
+            font-size: 7pt;
         }
-        .label-header {
+
+        .header {
             text-align: center;
-            width: 100%;
-            font-size: 10pt;
             font-weight: bold;
+            font-size: 9pt;
+            margin-bottom: 2mm;
+        }
+
+        .barcode {
+            text-align: center;
+            margin: 2mm 0;
+        }
+
+        .barcode img {
+            width: 50px;
+            height: 50px;
+        }
+
+        .info {
+            font-size: 7pt;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
             margin-bottom: 1mm;
         }
-        .qr-code-container {
-            width: 25mm;
-            height: 25mm;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .qr-code-container img {
-            max-width: 100%;
-            max-height: 100%;
-        }
-        .label-footer {
-            text-align: center;
-            width: 100%;
-            font-size: 8pt;
-            margin-top: 1mm;
-        }
-        .kode-text {
-            font-family: 'Courier New', monospace;
-            font-size: 9pt;
-            letter-spacing: 1px;
+
+        /* Break after every 15 labels (3x5) */
+        .page-break {
+            page-break-after: always;
         }
     </style>
 </head>
 <body>
-    <div class="label-container">
-        <div class="label-header">
-            <?= substr($kayu['nama_jenis'], 0, 20) ?>
+<?php 
+// Menggunakan loop untuk menampilkan label
+for ($i = 0; $i < 1; $i++): // Ganti 1 dengan jumlah yang diinginkan
+?>
+    <div class="label">
+        <div class="header">
+            <?= $kayu['kode_kayu'] ?>
         </div>
-        
-        <div class="qr-code-container">
-            <img src="<?= $qrCodeImage ?>">
+
+        <div class="barcode">
+            <img src="data:image/png;base64,<?= $qrcode_base64 ?>" alt="QR Code">
         </div>
-        
-        <div class="label-footer">
-            <div class="kode-text"><?= $kayu['kode_kayu'] ?></div>
-            <div><?= $kayu['panjang'] ?>x<?= $kayu['lebar'] ?>x<?= $kayu['tebal'] ?>cm</div>
-            <div><?= date('d/m/Y') ?></div>
+
+        <div class="info">
+            <div class="info-row">
+                <span>Barcode:</span>
+                <span><?= $kayu['barcode'] ?></span>
+            </div>
+            <div class="info-row">
+                <span>Jenis:</span>
+                <span><?= $kayu['nama_jenis'] ?></span>
+            </div>
+            <div class="info-row">
+                <span>Dimensi:</span>
+                <span><?= $kayu['panjang'] ?>x<?= $kayu['lebar'] ?>x<?= $kayu['tebal'] ?> cm</span>
+            </div>
+            <div class="info-row">
+                <span>Volume:</span>
+                <span><?= number_format($kayu['volume'], 4) ?> m³</span>
+            </div>
+            <div class="info-row">
+                <span>Part:</span>
+                <span><?= $kayu['grade'] ?></span>
+            </div>
         </div>
     </div>
+<?php 
+// Tambah page break setiap 15 label jika diperlukan
+if (($i + 1) % 15 == 0) echo '<div class="page-break"></div>';
+endfor; 
+?>
 </body>
 </html>

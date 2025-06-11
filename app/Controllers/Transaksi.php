@@ -30,16 +30,28 @@ class Transaksi extends BaseController
 
     public function index()
     {
+          $transaksi = $this->transaksiModel->select('transaksi.*, g1.nama_gudang as gudang_asal, g2.nama_gudang as gudang_tujuan, u.nama_lengkap as operator')
+            ->join('gudang g1', 'g1.id_gudang = transaksi.id_gudang_asal', 'left')
+            ->join('gudang g2', 'g2.id_gudang = transaksi.id_gudang_tujuan', 'left')
+            ->join('users u', 'u.id = transaksi.created_by', 'left')
+            ->orderBy('transaksi.created_at', 'DESC')
+            ->findAll();
+
+        // Ambil detail untuk setiap transaksi
+        foreach ($transaksi as &$t) {
+            $t['detail'] = $this->transaksiModel->getDetailTransaksi($t['id_transaksi']);
+        }
+
         $data = [
-            'title' => 'Data Transaksi',
-            'transaksi' => $this->transaksiModel->select('transaksi.*, g1.nama_gudang as gudang_asal, g2.nama_gudang as gudang_tujuan')
-                ->join('gudang g1', 'g1.id_gudang = transaksi.id_gudang_asal', 'left')
-                ->join('gudang g2', 'g2.id_gudang = transaksi.id_gudang_tujuan', 'left')
-                ->orderBy('created_at', 'DESC')
-                ->findAll()
+            'title' => 'Daftar Transaksi',
+            'transaksi' => $transaksi,
+            'gudang_list' => $this->gudangModel->findAll() // Kirim data gudang ke view
         ];
+
         return view('transaksi/index', $data);
     }
+
+    
 
     public function printLabelTransaksi($id_transaksi)
     {
@@ -349,31 +361,34 @@ class Transaksi extends BaseController
         return view('transaksi/detail', $data);
     }
     
-    public function print($id)
-    {
-        $transaksi = $this->transaksiModel->select('transaksi.*, g1.nama_gudang as gudang_asal, g2.nama_gudang as gudang_tujuan, u.nama_lengkap as operator')
-            ->join('gudang g1', 'g1.id_gudang = transaksi.id_gudang_asal', 'left')
-            ->join('gudang g2', 'g2.id_gudang = transaksi.id_gudang_tujuan', 'left')
-            ->join('users u', 'u.id = transaksi.created_by', 'left')
-            ->find($id);
-            
-        if(!$transaksi) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
-        }
-        
-        $detail = $this->transaksiDetailModel->getDetailByTransaksi($id);
-        
-        $data = [
-            'transaksi' => $transaksi,
-            'detail' => $detail
-        ];
-        
-        $dompdf = new \Dompdf\Dompdf();
-        $dompdf->loadHtml(view('transaksi/print', $data));
-        $dompdf->setPaper('A4', 'portrait');
-        $dompdf->render();
-        $dompdf->stream('transaksi-'.$transaksi['kode_transaksi'].'.pdf');
+public function print($id)
+{
+    $transaksi = $this->transaksiModel->select('transaksi.*, g1.nama_gudang as gudang_asal, g2.nama_gudang as gudang_tujuan, u.nama_lengkap as operator')
+        ->join('gudang g1', 'g1.id_gudang = transaksi.id_gudang_asal', 'left')
+        ->join('gudang g2', 'g2.id_gudang = transaksi.id_gudang_tujuan', 'left')
+        ->join('users u', 'u.id = transaksi.created_by', 'left')
+        ->find($id);
+
+    if(!$transaksi) {
+        throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
     }
+
+    $detail = $this->transaksiModel->getDetailTransaksi($id);
+
+    $data = [
+        'transaksi' => $transaksi,
+        'detail' => $detail
+    ];
+
+    // Load DomPDF library
+    $dompdf = new \Dompdf\Dompdf();
+    $dompdf->loadHtml(view('transaksi/print', $data));
+    $dompdf->setPaper('A4', 'portrait');
+    $dompdf->render();
+    
+    // Output the generated PDF
+    $dompdf->stream('transaksi-'.$transaksi['kode_transaksi'].'.pdf', ['Attachment' => false]);
+}
     public function createKeluar()
 {
     $data = [

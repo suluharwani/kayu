@@ -80,6 +80,10 @@ foreach($transaksi['detail'] as $item):
                 <span><?= $item['barcode'] ?></span>
             </div>
             <div class="info-row">
+                <span>Part:</span>
+                <span><?= $item['grade'] ?></span>
+            </div>
+            <div class="info-row">
                 <span>Jenis:</span>
                 <span><?= $item['nama_jenis'] ?></span>
             </div>
@@ -90,10 +94,6 @@ foreach($transaksi['detail'] as $item):
             <div class="info-row">
                 <span>Volume:</span>
                 <span><?= number_format($item['volume'], 4) ?> m³</span>
-            </div>
-            <div class="info-row">
-                <span>Transaksi:</span>
-                <span><?= strtoupper($transaksi['jenis_transaksi']) ?></span>
             </div>
             <div class="info-row">
                 <span>Tanggal:</span>

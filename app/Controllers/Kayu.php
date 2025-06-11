@@ -12,6 +12,9 @@ use Endroid\QrCode\RoundBlockSizeMode\RoundBlockSizeModeMargin;
 use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelHigh;
 use Endroid\QrCode\Color\Color;
 use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\Builder\Builder;
+
+use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevel;
 class Kayu extends BaseController
 {
     protected $kayuModel;
@@ -254,49 +257,39 @@ public function printQrCode($id)
         throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
     }
 
-    // Data to encode in QR Code
-    $qrContent = json_encode([
-        'kode' => $kayu['kode_kayu'],
-        'jenis' => $kayu['nama_jenis'],
-        'dimensi' => $kayu['panjang'].'x'.$kayu['lebar'].'x'.$kayu['tebal'],
-        'volume' => $kayu['volume'],
-        'grade' => $kayu['grade']
-    ]);
-
-    // Create QR Code (v6.x syntax)
-    $qrCode = QrCode::create($qrContent)
-        ->setEncoding(new Encoding('UTF-8'))
-        ->setErrorCorrectionLevel(new ErrorCorrectionLevelHigh())
-        ->setSize(300)
-        ->setMargin(10)
-        ->setRoundBlockSizeMode(new RoundBlockSizeModeMargin())
-        ->setForegroundColor(new Color(0, 0, 0)) // Black
-        ->setBackgroundColor(new Color(255, 255, 255)); // White
-
-    // Generate PNG
-    $writer = new PngWriter();
-    $result = $writer->write($qrCode);
-
-    // Convert to base64 for embedding in HTML
-    $qrCodeImage = 'data:image/png;base64,' . base64_encode($result->getString());
+    // Generate QR Code dengan format yang lebih sederhana
+    $qrCode = Builder::create()
+        ->writer(new PngWriter())
+        ->data(json_encode([
+            'kode' => $kayu['kode_kayu'],
+            'jenis' => $kayu['nama_jenis'],
+            'dimensi' => $kayu['panjang'].'x'.$kayu['lebar'].'x'.$kayu['tebal'],
+            'volume' => $kayu['volume'],
+            'grade' => $kayu['grade']
+        ]))
+        ->encoding(new Encoding('UTF-8'))
+        ->size(150) // Ukuran lebih kecil untuk label
+        ->margin(2)
+        ->build();
 
     $data = [
         'kayu' => $kayu,
-        'qrCodeImage' => $qrCodeImage
+        'qrcode_base64' => base64_encode($qrCode->getString())
     ];
 
-    // PDF Generation (unchanged)
+    // PDF Generation dengan ukuran label
     $options = new \Dompdf\Options();
     $options->set('isRemoteEnabled', true);
     $options->set('isHtml5ParserEnabled', true);
 
-    $dompdf = new \Dompdf\Dompdf($options);
-    $dompdf->loadHtml(view('kayu/print_qrcode', $data));
-    $dompdf->setPaper([0, 0, 162.28, 90.71], 'portrait');
-    $dompdf->render();
-    $dompdf->stream('qrcode-'.$kayu['kode_kayu'].'.pdf', [
-        'Attachment' => false
-    ]);
+     $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml(view('kayu/print_qrcode', $data));
+        $dompdf->setPaper([0, 0, 210, 297], 'portrait');
+        $dompdf->render();
+        $dompdf->stream('label-kayu-' . $kayu['kode_kayu'] . '.pdf', [
+            'Attachment' => false
+        ]);
+
 }
 
 public function printQrCodeBatch($ids)

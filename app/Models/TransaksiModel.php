@@ -39,7 +39,7 @@ class TransaksiModel extends Model
             
         if ($transaksi) {
             $transaksi['detail'] = $this->db->table('transaksi_detail td')
-                ->select('td.*, k.kode_kayu,k.barcode, k.panjang, k.lebar, k.tebal, k.volume, jk.nama_jenis')
+                ->select('td.*,k.grade, k.kode_kayu,k.barcode, k.panjang, k.lebar, k.tebal, k.volume, jk.nama_jenis')
                 ->join('kayu k', 'k.id_kayu = td.id_kayu')
                 ->join('jenis_kayu jk', 'jk.id_jenis = k.id_jenis')
                 ->where('td.id_transaksi', $id_transaksi)
@@ -73,6 +73,16 @@ public function getLaporanMutasi($start_date, $end_date)
         ->where("DATE(tanggal_transaksi) BETWEEN '$start_date' AND '$end_date'")
         ->orderBy('tanggal_transaksi', 'DESC')
         ->findAll();
+}
+public function getDetailTransaksi($id_transaksi)
+{
+    return $this->db->table('transaksi_detail td')
+        ->select('td.*, k.kode_kayu, jk.nama_jenis, k.panjang, k.lebar, k.tebal, k.volume')
+        ->join('kayu k', 'k.id_kayu = td.id_kayu')
+        ->join('jenis_kayu jk', 'jk.id_jenis = k.id_jenis')
+        ->where('td.id_transaksi', $id_transaksi)
+        ->get()
+        ->getResultArray();
 }
 
 }
