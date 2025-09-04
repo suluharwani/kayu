@@ -22,23 +22,29 @@ class KayuModel extends Model
             ->findAll();
     }
     
-    public function generateCode($id_jenis)
-    {
-        $jenisKayuModel = new \App\Models\JenisKayuModel();
-        $jenis = $jenisKayuModel->find($id_jenis);
-        $last = $this->where('id_jenis', $id_jenis)->orderBy('id_kayu', 'DESC')->first();
-        
-        $no = 1;
-        if ($last) {
-            $no = (int) substr($last['kode_kayu'], -4) + 1;
-        }
-        
-        return $jenis['kode_jenis'] . '-' . str_pad($no, 4, '0', STR_PAD_LEFT);
+public function generateCode($id_jenis)
+{
+    $jenisKayuModel = new \App\Models\JenisKayuModel();
+    $jenis = $jenisKayuModel->find($id_jenis);
+    $last = $this->where('id_jenis', $id_jenis)->orderBy('id_kayu', 'DESC')->first();
+    
+    $no = 1;
+    if ($last) {
+        // Ekstrak bagian hexadecimal dari kode terakhir
+        $last_code = $last['kode_kayu'];
+        $hex_part = substr($last_code, -4); // Ambil 4 karakter terakhir
+        $no = hexdec($hex_part) + 1; // Konversi ke decimal dan tambah 1
     }
+    
+    // Konversi ke hexadecimal dan pad dengan leading zeros
+    $hex_no = str_pad(dechex($no), 4, '0', STR_PAD_LEFT);
+    
+    return $jenis['kode_jenis'] . '-' . $hex_no;
+}
     
     public function generateBarcode($kode_kayu)
     {
-        return 'KAYU-' . $kode_kayu . '-' . bin2hex(random_bytes(4));
+        return  $kode_kayu;
     }
     
     public function hasTransactions($id_kayu)

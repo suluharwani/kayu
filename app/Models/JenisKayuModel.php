@@ -16,7 +16,7 @@ class JenisKayuModel extends Model
         if($last) {
             $no = (int) substr($last['kode_jenis'], 1) + 1;
         }
-        return 'J' . str_pad($no, 4, '0', STR_PAD_LEFT);
+        return 'K' . str_pad($no, 2, '0', STR_PAD_LEFT);
     }
     
     public function getKayuByJenis($id_jenis)

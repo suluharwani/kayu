@@ -260,13 +260,8 @@ public function printQrCode($id)
     // Generate QR Code dengan format yang lebih sederhana
     $qrCode = Builder::create()
         ->writer(new PngWriter())
-        ->data(json_encode([
-            'kode' => $kayu['kode_kayu'],
-            'jenis' => $kayu['nama_jenis'],
-            'dimensi' => $kayu['panjang'].'x'.$kayu['lebar'].'x'.$kayu['tebal'],
-            'volume' => $kayu['volume'],
-            'grade' => $kayu['grade']
-        ]))
+        ->data($kayu['kode_kayu']
+        )
         ->encoding(new Encoding('UTF-8'))
         ->size(150) // Ukuran lebih kecil untuk label
         ->margin(2)
