@@ -564,4 +564,254 @@ public function saveMutasi()
 
     return redirect()->to("/transaksi/detail/$id_transaksi")->with('message', 'Transaksi mutasi berhasil disimpan');
 }
+
+private function getGlobalStock()
+{
+    $stockData = $this->stockModel->getStockGlobal();
+    
+    $result = [];
+    foreach ($stockData as $stock) {
+        $result[] = [
+            'id_kayu' => $stock['id_kayu'],
+            'kode_kayu' => $stock['kode_kayu'],
+            'nama_jenis' => $stock['nama_jenis'],
+            'id_gudang' => $stock['id_gudang'],
+            'nama_gudang' => $stock['nama_gudang'],
+            'quantity' => $stock['quantity'],
+            'volume_total' => $stock['quantity'] * $stock['volume'],
+            'lokasi_rak' => $stock['lokasi_rak']
+        ];
+    }
+    
+    return $this->response->setJSON([
+        'success' => true,
+        'data' => $result,
+        'total_records' => count($result)
+    ]);
+}
+
+/**
+ * Mendapatkan stock berdasarkan jenis kayu tertentu
+ */
+private function getStockByKayu($id_kayu)
+{
+    // Validasi kayu exists
+    $kayu = $this->kayuModel->find($id_kayu);
+    if (!$kayu) {
+        return $this->response->setJSON([
+            'success' => false,
+            'message' => 'Kayu tidak ditemukan'
+        ]);
+    }
+    
+    $stockData = $this->stockModel->where('id_kayu', $id_kayu)->findAll();
+    
+    $result = [];
+    $totalQuantity = 0;
+    $totalVolume = 0;
+    
+    foreach ($stockData as $stock) {
+        $gudang = $this->gudangModel->find($stock['id_gudang']);
+        
+        $result[] = [
+            'id_stock' => $stock['id_stock'],
+            'id_gudang' => $stock['id_gudang'],
+            'nama_gudang' => $gudang['nama_gudang'],
+            'quantity' => $stock['quantity'],
+            'volume' => $kayu['volume'],
+            'volume_total' => $stock['quantity'] * $kayu['volume'],
+            'lokasi_rak' => $stock['lokasi_rak']
+        ];
+        
+        $totalQuantity += $stock['quantity'];
+        $totalVolume += ($stock['quantity'] * $kayu['volume']);
+    }
+    
+    return $this->response->setJSON([
+        'success' => true,
+        'kayu' => [
+            'id_kayu' => $kayu['id_kayu'],
+            'kode_kayu' => $kayu['kode_kayu'],
+            'nama_jenis' => $this->getJenisKayuName($kayu['id_jenis']),
+            'panjang' => $kayu['panjang'],
+            'lebar' => $kayu['lebar'],
+            'tebal' => $kayu['tebal'],
+            'volume_per_pcs' => $kayu['volume']
+        ],
+        'stock' => $result,
+        'summary' => [
+            'total_quantity' => $totalQuantity,
+            'total_volume' => $totalVolume,
+            'total_gudang' => count($result)
+        ]
+    ]);
+}
+
+/**
+ * Mendapatkan stock berdasarkan gudang tertentu
+ */
+private function getStockByGudang($id_gudang)
+{
+    // Validasi gudang exists
+    $gudang = $this->gudangModel->find($id_gudang);
+    if (!$gudang) {
+        return $this->response->setJSON([
+            'success' => false,
+            'message' => 'Gudang tidak ditemukan'
+        ]);
+    }
+    
+    $stockData = $this->stockModel->getStockByGudang($id_gudang);
+    
+    $result = [];
+    $totalQuantity = 0;
+    $totalVolume = 0;
+    
+    foreach ($stockData as $stock) {
+        $result[] = [
+            'id_stock' => $stock['id_stock'],
+            'id_kayu' => $stock['id_kayu'],
+            'kode_kayu' => $stock['kode_kayu'],
+            'nama_jenis' => $stock['nama_jenis'],
+            'quantity' => $stock['quantity'],
+            'volume_per_pcs' => $stock['volume'],
+            'volume_total' => $stock['quantity'] * $stock['volume'],
+            'lokasi_rak' => $stock['lokasi_rak']
+        ];
+        
+        $totalQuantity += $stock['quantity'];
+        $totalVolume += ($stock['quantity'] * $stock['volume']);
+    }
+    
+    return $this->response->setJSON([
+        'success' => true,
+        'gudang' => [
+            'id_gudang' => $gudang['id_gudang'],
+            'kode_gudang' => $gudang['kode_gudang'],
+            'nama_gudang' => $gudang['nama_gudang'],
+            'alamat' => $gudang['alamat'],
+            'kapasitas' => $gudang['kapasitas']
+        ],
+        'stock' => $result,
+        'summary' => [
+            'total_quantity' => $totalQuantity,
+            'total_volume' => $totalVolume,
+            'total_items' => count($result)
+        ]
+    ]);
+}
+
+/**
+ * Mendapatkan stock spesifik untuk kayu tertentu di gudang tertentu
+ */
+private function getSpecificStock($id_kayu, $id_gudang)
+{
+    // Validasi kayu exists
+    $kayu = $this->kayuModel->find($id_kayu);
+    if (!$kayu) {
+        return $this->response->setJSON([
+            'success' => false,
+            'message' => 'Kayu tidak ditemukan'
+        ]);
+    }
+    
+    // Validasi gudang exists
+    $gudang = $this->gudangModel->find($id_gudang);
+    if (!$gudang) {
+        return $this->response->setJSON([
+            'success' => false,
+            'message' => 'Gudang tidak ditemukan'
+        ]);
+    }
+    
+    $stock = $this->stockModel->where([
+        'id_kayu' => $id_kayu,
+        'id_gudang' => $id_gudang
+    ])->first();
+    
+    $quantity = $stock ? $stock['quantity'] : 0;
+    $volumeTotal = $quantity * $kayu['volume'];
+    
+    return $this->response->setJSON([
+        'success' => true,
+        'data' => [
+            'kayu' => [
+                'id_kayu' => $kayu['id_kayu'],
+                'kode_kayu' => $kayu['kode_kayu'],
+                'nama_jenis' => $this->getJenisKayuName($kayu['id_jenis']),
+                'panjang' => $kayu['panjang'],
+                'lebar' => $kayu['lebar'],
+                'tebal' => $kayu['tebal'],
+                'volume_per_pcs' => $kayu['volume']
+            ],
+            'gudang' => [
+                'id_gudang' => $gudang['id_gudang'],
+                'kode_gudang' => $gudang['kode_gudang'],
+                'nama_gudang' => $gudang['nama_gudang']
+            ],
+            'stock' => [
+                'quantity' => $quantity,
+                'volume_total' => $volumeTotal,
+                'lokasi_rak' => $stock ? $stock['lokasi_rak'] : null
+            ]
+        ]
+    ]);
+}
+
+/**
+ * Helper function untuk mendapatkan nama jenis kayu
+ */
+private function getJenisKayuName($id_jenis)
+{
+    $jenisModel = new \App\Models\JenisKayuModel();
+    $jenis = $jenisModel->find($id_jenis);
+    return $jenis ? $jenis['nama_jenis'] : 'Unknown';
+}
+public function getStock($id_kayu, $id_gudang)
+{
+    // Validasi parameter
+    if (!$id_kayu || !$id_gudang) {
+        return $this->response->setJSON([
+            'success' => false,
+            'message' => 'Parameter id_kayu dan id_gudang diperlukan'
+        ]);
+    }
+
+    // Cek apakah kayu exists
+    $kayu = $this->kayuModel->find($id_kayu);
+    if (!$kayu) {
+        return $this->response->setJSON([
+            'success' => false,
+            'message' => 'Kayu tidak ditemukan'
+        ]);
+    }
+
+    // Cek apakah gudang exists
+    $gudang = $this->gudangModel->find($id_gudang);
+    if (!$gudang) {
+        return $this->response->setJSON([
+            'success' => false,
+            'message' => 'Gudang tidak ditemukan'
+        ]);
+    }
+
+    // Ambil stock dari database
+    $stock = $this->stockModel->where([
+        'id_kayu' => $id_kayu,
+        'id_gudang' => $id_gudang
+    ])->first();
+
+    $quantity = $stock ? $stock['quantity'] : 0;
+
+    return $this->response->setJSON([
+        'success' => true,
+        'data' => [
+            'id_kayu' => $id_kayu,
+            'id_gudang' => $id_gudang,
+            'quantity' => $quantity,
+            'kode_kayu' => $kayu['kode_kayu'],
+            'nama_gudang' => $gudang['nama_gudang']
+        ]
+    ]);
+}
 }

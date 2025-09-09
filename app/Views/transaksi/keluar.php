@@ -1,19 +1,39 @@
 <?= $this->extend('layout/template'); ?>
 
 <?= $this->section('content'); ?>
-<div class="container-fluid">
+<div class="container">
     <div class="row">
         <div class="col">
             <h2 class="mt-2">Transaksi Keluar Gudang</h2>
             <form id="formTransaksi" action="/transaksi/saveKeluar" method="post">
                 <?= csrf_field(); ?>
+                
+                <!-- Input Kode Transaksi untuk mengambil data -->
+                <div class="form-group row">
+                    <label for="inputKodeTransaksi" class="col-sm-2 col-form-label">Kode Transaksi (Opsional)</label>
+                    <div class="col-sm-10">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="inputKodeTransaksi" 
+                                   placeholder="Masukkan kode transaksi (TK...) untuk mengambil item" autocomplete="off">
+                            <div class="input-group-append">
+                                <button type="button" class="btn btn-outline-primary" id="btnLoadTransaksi">
+                                    Muat Transaksi
+                                </button>
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">
+                            Masukkan kode transaksi keluar (TK...) untuk mengambil item dari transaksi sebelumnya
+                        </small>
+                    </div>
+                </div>
+
                 <div class="form-group row">
                     <label for="id_gudang" class="col-sm-2 col-form-label">Gudang Asal</label>
                     <div class="col-sm-10">
                         <select class="form-control" id="id_gudang" name="id_gudang" required>
                             <option value="">-- Pilih Gudang --</option>
-                            <?php foreach($gudang as $g): ?>
-                                <option value="<?= $g['id_gudang']; ?>"><?= $g['kode_gudang']; ?> - <?= $g['nama_gudang']; ?></option>
+                            <?php foreach($gudang as $g) : ?>
+                                <option value="<?= $g['id_gudang']; ?>"><?= $g['nama_gudang']; ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -32,21 +52,37 @@
                 </div>
                 
                 <h4 class="mt-4">Detail Barang</h4>
-                <div class="table-responsive">
-                    <table class="table table-bordered" id="tableItems">
+                <div class="alert alert-info">
+                    <strong>Instruksi:</strong> 
+                    <ul>
+                        <li>Pilih gudang asal terlebih dahulu untuk melihat stok tersedia</li>
+                        <li>Masukkan kode kayu dan tekan <kbd>Enter</kbd> untuk menambahkan item. Quantity default = 1.</li>
+                        <li>Quantity tidak boleh melebihi stok yang tersedia</li>
+                    </ul>
+                </div>
+                
+                <div class="form-group row">
+                    <label for="inputKode" class="col-sm-2 col-form-label">Kode Kayu</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" id="inputKode" placeholder="Masukkan kode kayu dan tekan Enter" autocomplete="off">
+                    </div>
+                </div>
+                
+                <div class="table-responsive mt-3">
+                    <table class="table table-bordered">
                         <thead>
                             <tr>
-                                <th>Jenis Kayu</th>
-                                <th>Stock Tersedia</th>
-                                <th>Quantity</th>
-                                <th>Aksi</th>
+                                <th width="50%">Kode Kayu</th>
+                                <th width="20%">Dimensi</th>
+                                <th width="5%">Stok Tersedia</th>
+                                <th width="25%">Jumlah</th>
+                                <th width="5%">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody id="tbodyItems">
-                            <!-- Items akan ditambahkan via JS -->
+                        <tbody id="itemsTable">
+                            <!-- Items akan ditambahkan di sini via JavaScript -->
                         </tbody>
                     </table>
-                    <button type="button" class="btn btn-sm btn-primary" id="btnAddItem">Tambah Item</button>
                 </div>
                 
                 <input type="hidden" id="items" name="items">
@@ -62,186 +98,348 @@
     </div>
 </div>
 
-<!-- Modal Add Item -->
-<div class="modal fade" id="modalAddItem" tabindex="-1" role="dialog" aria-labelledby="modalAddItemLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalAddItemLabel">Tambah Item</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="modal_id_kayu">Jenis Kayu</label>
-                    <select class="form-control" id="modal_id_kayu">
-                        <option value="">-- Pilih Jenis Kayu --</option>
-                        <?php foreach($kayu as $k): ?>
-                            <option value="<?= $k['id_kayu']; ?>">
-                                <?= $k['kode_kayu']; ?> - <?= $k['nama_jenis']; ?> (<?= $k['panjang']; ?>x<?= $k['lebar']; ?>x<?= $k['tebal']; ?>cm)
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="modal_stock">Stock Tersedia</label>
-                    <input type="number" class="form-control" id="modal_stock" readonly>
-                </div>
-                <div class="form-group">
-                    <label for="modal_quantity">Quantity</label>
-                    <input type="number" class="form-control" id="modal_quantity" min="1" value="1">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
-                <button type="button" class="btn btn-primary" id="btnSaveItem">Simpan</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
 $(document).ready(function() {
-    let items = [];
-    let currentGudang = '';
-    let kayuStock = <?= json_encode(array_reduce($kayu, function($carry, $item) {
-        $carry[$item['id_kayu']] = $item;
-        return $carry;
-    }, [])) ?>;
-    
     // Format tanggal sekarang untuk input datetime-local
     let now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('tanggal').value = now.toISOString().slice(0,16);
     
-    // Update stock saat gudang berubah
+    // Cache untuk data kayu
+    let kayuData = <?= json_encode($kayu); ?>;
+    let kodeToIdMap = {};
+    let addedItems = {}; // Untuk melacak item yang sudah ditambahkan
+    let currentGudang = '';
+    
+    // Membuat mapping kode kayu ke ID dan data lengkap
+    kayuData.forEach(kayu => {
+        kodeToIdMap[kayu.kode_kayu] = kayu.id_kayu;
+    });
+    
+    // Handler untuk tombol muat transaksi
+    $('#btnLoadTransaksi').click(function() {
+        loadTransaksiItems();
+    });
+    
+    // Handler untuk input kode transaksi (tekan enter)
+    $('#inputKodeTransaksi').keydown(function(e) {
+        if(e.key === 'Enter') {
+            e.preventDefault();
+            loadTransaksiItems();
+        }
+    });
+    
+    // Handler untuk input kode kayu
+    $('#inputKode').keydown(function(e) {
+        if(e.key === 'Enter') {
+            e.preventDefault();
+            processKodeInput();
+        }
+    });
+    
+    // Handler untuk perubahan gudang
     $('#id_gudang').change(function() {
         currentGudang = $(this).val();
-        renderItems();
-    });
-    
-    // Update stock info saat pilih kayu
-    $('#modal_id_kayu').change(function() {
-        const idKayu = $(this).val();
-        if (!idKayu || !currentGudang) {
-            $('#modal_stock').val(0);
-            return;
-        }
-        
-        // Cari stock dari data yang sudah diload
-        const stock = getStock(idKayu, currentGudang);
-        $('#modal_stock').val(stock);
-        $('#modal_quantity').attr('max', stock);
-    });
-    
-    // Buka modal tambah item
-    $('#btnAddItem').click(function() {
-        if (!$('#id_gudang').val()) {
-            alert('Pilih gudang terlebih dahulu');
-            return;
-        }
-        $('#modalAddItem').modal('show');
-    });
-    
-    // Simpan item ke tabel
-    $('#btnSaveItem').click(function() {
-        const id_kayu = $('#modal_id_kayu').val();
-        const quantity = parseInt($('#modal_quantity').val());
-        const stock = parseInt($('#modal_stock').val());
-        
-        if (!id_kayu || !quantity) {
-            alert('Harap pilih jenis kayu dan isi quantity!');
-            return;
-        }
-        
-        if (quantity > stock) {
-            alert('Quantity melebihi stock tersedia!');
-            return;
-        }
-        
-        // Cek apakah item sudah ada
-        const existingItem = items.find(item => item.id_kayu == id_kayu);
-        if (existingItem) {
-            if ((existingItem.quantity + quantity) > stock) {
-                alert('Total quantity melebihi stock tersedia!');
+        // Reset items jika gudang berubah
+        if (Object.keys(addedItems).length > 0) {
+            if (confirm('Mengubah gudang akan menghapus semua item yang sudah ditambahkan. Lanjutkan?')) {
+                addedItems = {};
+                $('#itemsTable').empty();
+                updateHiddenItemsField();
+            } else {
+                $(this).val(currentGudang);
                 return;
             }
-            existingItem.quantity += quantity;
-        } else {
-            const selectedKayu = kayuStock[id_kayu];
-            
-            items.push({
-                id_kayu: id_kayu,
-                kode_kayu: selectedKayu.kode_kayu,
-                nama_jenis: selectedKayu.nama_jenis,
-                stock: stock,
-                quantity: quantity
-            });
+        }
+    });
+    
+    // Fungsi untuk memuat item dari transaksi
+    function loadTransaksiItems() {
+        const kodeTransaksi = $('#inputKodeTransaksi').val().trim();
+        
+        if(!kodeTransaksi) {
+            alert('Harap masukkan kode transaksi!');
+            return;
         }
         
-        renderItems();
-        $('#modalAddItem').modal('hide');
-        resetModal();
-    });
-    
-    // Hapus item
-    $(document).on('click', '.btnDeleteItem', function() {
-        const index = $(this).data('index');
-        items.splice(index, 1);
-        renderItems();
-    });
-    
-    // Render items ke tabel
-    function renderItems() {
-        let html = '';
-        items.forEach((item, index) => {
-            // Update stock terbaru
-            item.stock = getStock(item.id_kayu, currentGudang);
-            
-            html += `
-                <tr>
-                    <td>${item.kode_kayu} - ${item.nama_jenis}</td>
-                    <td>${item.stock}</td>
-                    <td>${item.quantity}</td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-danger btnDeleteItem" data-index="${index}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
+        // Validasi format kode transaksi (harus dimulai dengan TK)
+        if(!kodeTransaksi.startsWith('TK')) {
+            alert('Kode transaksi harus dimulai dengan TK (Transaksi Keluar)');
+            return;
+        }
+        
+        // Tampilkan loading
+        $('#btnLoadTransaksi').html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Memuat...');
+        
+        // AJAX request untuk mengambil data transaksi
+        $.ajax({
+            url: '/transaksi/getDetailByKode/' + kodeTransaksi,
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                $('#btnLoadTransaksi').html('Muat Transaksi');
+                
+                if(response.success && response.data) {
+                    // Kosongkan item yang sudah ada
+                    addedItems = {};
+                    $('#itemsTable').empty();
+                    
+                    // Tambahkan item dari transaksi
+                    response.data.detail.forEach(item => {
+                        const kode = item.kode_kayu;
+                        
+                        addedItems[kode] = {
+                            id_kayu: item.id_kayu,
+                            kode_kayu: item.kode_kayu,
+                            quantity: item.quantity,
+                            data: {
+                                panjang: item.panjang,
+                                lebar: item.lebar,
+                                tebal: item.tebal,
+                                volume: item.volume
+                            }
+                        };
+                        
+                        addItemRow(kode);
+                    });
+                    
+                    updateHiddenItemsField();
+                    alert('Berhasil memuat ' + response.data.detail.length + ' item dari transaksi ' + kodeTransaksi);
+                } else {
+                    alert('Transaksi tidak ditemukan atau terjadi kesalahan: ' + (response.message || ''));
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#btnLoadTransaksi').html('Muat Transaksi');
+                alert('Error: ' + (xhr.responseJSON?.message || 'Gagal memuat transaksi'));
+            }
         });
-        
-        $('#tbodyItems').html(html);
-        $('#items').val(JSON.stringify(items));
     }
     
-    // Reset modal
-    function resetModal() {
-        $('#modal_id_kayu').val('');
-        $('#modal_stock').val('');
-        $('#modal_quantity').val('1');
+    // Fungsi untuk memproses input kode kayu
+    function processKodeInput() {
+        const kode = $('#inputKode').val().trim();
+        
+        if(!kode) {
+            alert('Harap masukkan kode kayu!');
+            return;
+        }
+        
+        if(!currentGudang) {
+            alert('Harap pilih gudang asal terlebih dahulu!');
+            $('#id_gudang').focus();
+            return;
+        }
+        
+        // Cek apakah kode valid
+        if(!kodeToIdMap[kode]) {
+            alert('Kode kayu tidak valid: ' + kode);
+            $('#inputKode').val('');
+            return;
+        }
+        
+        // Cek stok tersedia
+        const stock = getStock(kodeToIdMap[kode], currentGudang);
+        if(stock <= 0) {
+            alert('Stok tidak tersedia untuk kayu: ' + kode);
+            $('#inputKode').val('');
+            return;
+        }
+        
+        // Cek apakah item sudah ditambahkan
+        if(addedItems[kode]) {
+            // Jika sudah ada, tambahkan quantity jika masih mencukupi
+            if(addedItems[kode].quantity + 1 > stock) {
+                alert('Quantity melebihi stok tersedia! Stok: ' + stock);
+                return;
+            }
+            addedItems[kode].quantity += 1;
+            updateItemRow(kode);
+        } else {
+            // Jika belum, tambahkan item baru
+            const kayu = kayuData.find(k => k.kode_kayu === kode);
+            addedItems[kode] = {
+                id_kayu: kayu.id_kayu,
+                kode_kayu: kayu.kode_kayu,
+                quantity: 1,
+                stock: stock,
+                data: kayu
+            };
+            addItemRow(kode);
+        }
+        
+        // Reset input
+        $('#inputKode').val('');
+        updateHiddenItemsField();
     }
     
-    // Get stock dari data yang sudah diload
-    function getStock(idKayu, idGudang) {
-        // Di implementasi nyata, ini akan query ke database
-        // Untuk demo, kita return nilai random
-        return Math.floor(Math.random() * 100) + 1;
+// Fungsi untuk mendapatkan stok dari server
+function getStock(idKayu, idGudang) {
+    // Menggunakan AJAX untuk mendapatkan stok real-time dari server
+    let stockValue = 0;
+    
+    // Lakukan AJAX call synchronous untuk simplicity
+    $.ajax({
+        url: '/transaksi/getStock/' + idKayu + '/' + idGudang,
+        type: 'GET',
+        dataType: 'json',
+        async: false, // Synchronous untuk mendapatkan nilai return
+        success: function(response) {
+            if(response.success) {
+                stockValue = response.data.quantity;
+            } else {
+                alert('Error mendapatkan stok: ' + response.message);
+                stockValue = 0;
+            }
+        },
+        error: function(xhr, status, error) {
+            alert('Error: Gagal mendapatkan data stok');
+            stockValue = 0;
+        }
+    });
+    
+    return stockValue;
+}
+    
+    // Fungsi untuk menambahkan baris item baru
+    function addItemRow(kode) {
+        const item = addedItems[kode];
+        const row = `
+            <tr id="row-${kode}">
+                <td>
+                    ${item.kode_kayu}
+                    <input type="hidden" name="kode[]" value="${kode}">
+                </td>
+                <td>${item.data.panjang}x${item.data.lebar}x${item.data.tebal}cm</td>
+                <td>${item.stock}</td>
+                <td>
+                    <div class="input-group">
+                        <input type="number" class="form-control quantity-input" 
+                               data-kode="${kode}" value="${item.quantity}" min="1" max="${item.stock}">
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-outline-secondary btn-sm btn-dec" data-kode="${kode}">-</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm btn-inc" data-kode="${kode}">+</button>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger btn-remove" data-kode="${kode}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        $('#itemsTable').append(row);
+    }
+    
+    // Fungsi untuk memperbarui baris item yang sudah ada
+    function updateItemRow(kode) {
+        const item = addedItems[kode];
+        $(`#row-${kode} .quantity-input`).val(item.quantity).attr('max', item.stock);
+        $(`#row-${kode} td:nth-child(3)`).text(item.stock);
+    }
+    
+    // Fungsi untuk menghapus item
+    function removeItem(kode) {
+        delete addedItems[kode];
+        $(`#row-${kode}`).remove();
+        updateHiddenItemsField();
+    }
+    
+    // Handler untuk tombol hapus
+    $(document).on('click', '.btn-remove', function() {
+        const kode = $(this).data('kode');
+        removeItem(kode);
+    });
+    
+    // Handler untuk tombol increment
+    $(document).on('click', '.btn-inc', function() {
+        const kode = $(this).data('kode');
+        if(addedItems[kode].quantity < addedItems[kode].stock) {
+            addedItems[kode].quantity += 1;
+            updateItemRow(kode);
+            updateHiddenItemsField();
+        } else {
+            alert('Tidak dapat menambah quantity, melebihi stok tersedia!');
+        }
+    });
+    
+    // Handler untuk tombol decrement
+    $(document).on('click', '.btn-dec', function() {
+        const kode = $(this).data('kode');
+        if(addedItems[kode].quantity > 1) {
+            addedItems[kode].quantity -= 1;
+            updateItemRow(kode);
+            updateHiddenItemsField();
+        }
+    });
+    
+    // Handler untuk input quantity manual
+    $(document).on('change', '.quantity-input', function() {
+        const kode = $(this).data('kode');
+        const newQuantity = parseInt($(this).val()) || 1;
         
-
+        if(newQuantity > addedItems[kode].stock) {
+            alert('Quantity melebihi stok tersedia! Stok: ' + addedItems[kode].stock);
+            $(this).val(addedItems[kode].quantity);
+            return;
+        }
+        
+        addedItems[kode].quantity = newQuantity;
+        updateHiddenItemsField();
+    });
+    
+    // Fungsi untuk memperbarui hidden field
+    function updateHiddenItemsField() {
+        const itemsArray = Object.values(addedItems).map(item => ({
+            id_kayu: item.id_kayu,
+            quantity: item.quantity
+        }));
+        $('#items').val(JSON.stringify(itemsArray));
     }
     
     // Validasi sebelum submit
     $('#formTransaksi').submit(function(e) {
-        if (items.length === 0) {
+        if(Object.keys(addedItems).length === 0) {
             alert('Harap tambahkan minimal 1 item!');
+            e.preventDefault();
+            return false;
+        }
+        
+        if(!currentGudang) {
+            alert('Harap pilih gudang asal!');
             e.preventDefault();
             return false;
         }
         return true;
     });
+    
+    // Fokus ke input kode transaksi saat halaman dimuat
+    $('#inputKodeTransaksi').focus();
 });
 </script>
+
+<style>
+#inputKode, #inputKodeTransaksi {
+    font-weight: bold;
+}
+
+.quantity-input {
+    text-align: center;
+}
+
+.btn-inc, .btn-dec {
+    width: 30px;
+}
+
+.input-group {
+    max-width: 150px;
+}
+
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+</style>
+
 <?= $this->endSection(); ?>

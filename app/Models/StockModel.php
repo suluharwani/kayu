@@ -82,4 +82,5 @@ public function getGudangList()
 {
     return $this->db->table('gudang')->orderBy('nama_gudang')->get()->getResultArray();
 }
+
 }
