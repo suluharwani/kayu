@@ -124,7 +124,6 @@
     </a>
     <a href="/transaksi" class="btn btn-secondary">Kembali</a>
 </div>
-                <a href="/transaksi" class="btn btn-secondary">Kembali</a>
             </div>
         </div>
     </div>

@@ -52,55 +52,46 @@ class Kayu extends BaseController
     }
 
     public function store()
-    {
-        $rules = [
-            'id_jenis' => 'required',
-            'panjang' => 'required|numeric',
-            'lebar' => 'required|numeric',
-            'tebal' => 'required|numeric',
-            'grade' => 'required',
-            'kualitas' => 'required',
-            'id_gudang' => 'required',
-            'quantity' => 'required|numeric'
-        ];
+{
+    $rules = [
+        'id_jenis' => 'required',
+        'panjang' => 'required|numeric',
+        'lebar' => 'required|numeric',
+        'tebal' => 'required|numeric',
+        'grade' => 'required',
+        'kualitas' => 'required'
+    ];
 
-        if (!$this->validate($rules)) {
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
-        }
-
-        // Hitung volume
-        $panjang = $this->request->getVar('panjang');
-        $lebar = $this->request->getVar('lebar');
-        $tebal = $this->request->getVar('tebal');
-        $volume = ($panjang * $lebar * $tebal) / 1000000; // Konversi ke m3
-
-        // Generate kode kayu dan barcode
-        $id_jenis = $this->request->getVar('id_jenis');
-        $kode_kayu = $this->kayuModel->generateCode($id_jenis);
-        $barcode = $this->kayuModel->generateBarcode($kode_kayu);
-
-        // Simpan data kayu
-        $this->kayuModel->save([
-            'kode_kayu' => $kode_kayu,
-            'id_jenis' => $id_jenis,
-            'panjang' => $panjang,
-            'lebar' => $lebar,
-            'tebal' => $tebal,
-            'volume' => $volume,
-            'grade' => $this->request->getVar('grade'),
-            'kualitas' => $this->request->getVar('kualitas'),
-            'barcode' => $barcode
-        ]);
-
-        $id_kayu = $this->kayuModel->insertID();
-
-        // Update stock
-        $id_gudang = $this->request->getVar('id_gudang');
-        $quantity = $this->request->getVar('quantity');
-        $this->stockModel->updateStock($id_kayu, $id_gudang, $quantity);
-
-        return redirect()->to('/kayu')->with('message', 'Data kayu berhasil ditambahkan');
+    if (!$this->validate($rules)) {
+        return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
     }
+
+    // Hitung volume
+    $panjang = $this->request->getVar('panjang');
+    $lebar = $this->request->getVar('lebar');
+    $tebal = $this->request->getVar('tebal');
+    $volume = ($panjang * $lebar * $tebal) / 1000000; // Konversi ke m3
+
+    // Generate kode kayu dan barcode
+    $id_jenis = $this->request->getVar('id_jenis');
+    $kode_kayu = $this->kayuModel->generateCode($id_jenis);
+    $barcode = $this->kayuModel->generateBarcode($kode_kayu);
+
+    // Simpan data kayu tanpa stock
+    $this->kayuModel->save([
+        'kode_kayu' => $kode_kayu,
+        'id_jenis' => $id_jenis,
+        'panjang' => $panjang,
+        'lebar' => $lebar,
+        'tebal' => $tebal,
+        'volume' => $volume,
+        'grade' => $this->request->getVar('grade'),
+        'kualitas' => $this->request->getVar('kualitas'),
+        'barcode' => $barcode
+    ]);
+
+    return redirect()->to('/kayu')->with('message', 'Data kayu berhasil ditambahkan (tanpa stock)');
+}
 
     public function edit($id)
     {

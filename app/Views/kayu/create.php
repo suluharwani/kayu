@@ -6,7 +6,7 @@
         <div class="col">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">Tambah Data Kayu</h3>
+                    <h3 class="card-title">Tambah Data Kayu (Tanpa Stock)</h3>
                 </div>
                 <div class="card-body">
                     <form action="/kayu/store" method="post">
@@ -56,25 +56,6 @@
                                     <option value="B">B (Baik)</option>
                                     <option value="C">C (Cukup)</option>
                                 </select>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group row">
-                            <label for="id_gudang" class="col-sm-2 col-form-label">Gudang</label>
-                            <div class="col-sm-10">
-                                <select class="form-control" id="id_gudang" name="id_gudang" required>
-                                    <option value="">-- Pilih Gudang --</option>
-                                    <?php foreach($gudang as $g): ?>
-                                        <option value="<?= $g['id_gudang']; ?>"><?= $g['nama_gudang']; ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group row">
-                            <label for="quantity" class="col-sm-2 col-form-label">Quantity</label>
-                            <div class="col-sm-10">
-                                <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="1" required>
                             </div>
                         </div>
                         

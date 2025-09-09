@@ -34,7 +34,7 @@ $routes->group('', ['filter' => 'auth'], function ($routes) {
     $routes->get('transaksi/print/(:num)', 'Transaksi::print/$1');
     $routes->get('transaksi/print-label-kayu/(:num)', 'Transaksi::printLabelKayu/$1');
     $routes->get('transaksi/print-label/(:num)', 'Transaksi::printLabelTransaksi/$1');
-
+    $routes->get('transaksi/getDetailByKode/(:any)', 'Transaksi::getDetailByKode/$1');
 
     // Auth Routes
     $routes->get('login', 'Auth::login');

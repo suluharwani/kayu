@@ -28,6 +28,36 @@ class Transaksi extends BaseController
         $this->stockModel = new StockModel();
     }
 
+    // Di dalam class Transaksi
+public function getDetailByKode($kode_transaksi)
+{
+    $transaksi = $this->transaksiModel->where('kode_transaksi', $kode_transaksi)->first();
+    
+    if (!$transaksi) {
+        return $this->response->setJSON([
+            'success' => false,
+            'message' => 'Transaksi tidak ditemukan'
+        ]);
+    }
+    
+    // Pastikan hanya transaksi masuk yang bisa diambil
+    if ($transaksi['jenis_transaksi'] !== 'masuk') {
+        return $this->response->setJSON([
+            'success' => false,
+            'message' => 'Hanya transaksi masuk (TM) yang dapat diambil'
+        ]);
+    }
+    
+    $detail = $this->transaksiDetailModel->getDetailByTransaksi($transaksi['id_transaksi']);
+    
+    return $this->response->setJSON([
+        'success' => true,
+        'data' => [
+            'transaksi' => $transaksi,
+            'detail' => $detail
+        ]
+    ]);
+}
     public function index()
     {
           $transaksi = $this->transaksiModel->select('transaksi.*, g1.nama_gudang as gudang_asal, g2.nama_gudang as gudang_tujuan, u.nama_lengkap as operator')

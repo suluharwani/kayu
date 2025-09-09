@@ -30,6 +30,7 @@
                             <thead>
                                 <tr>
                                     <th width="5%">No</th>
+                                    <th>Dibuat</th>
                                     <th>Kode Kayu</th>
                                     <th>Jenis Kayu</th>
                                     <th>Dimensi (cm)</th>
@@ -44,6 +45,7 @@
                                 <?php foreach($kayu as $k): ?>
                                 <tr>
                                     <td><?= $no++; ?></td>
+                                    <td><?= $k['created_at']; ?></td>
                                     <td><?= $k['kode_kayu']; ?></td>
                                     <td><?= $k['nama_jenis']; ?></td>
                                     <td><?= $k['panjang']; ?> x <?= $k['lebar']; ?> x <?= $k['tebal']; ?></td>
