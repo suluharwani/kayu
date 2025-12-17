@@ -119,42 +119,54 @@ public function getDetailByKode($kode_transaksi)
     }
 
     public function printLabelKayu($id_transaksi)
-    {
-        header('Content-Type: application/pdf');
-        header('Cache-Control: private, max-age=0, must-revalidate');
-        $transaksi = $this->transaksiModel->getTransaksiWithDetails($id_transaksi);
-        if (!$transaksi) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
-        }
-
-        foreach ($transaksi['detail'] as &$item) {
-            $result = Builder::create()
-                ->writer(new PngWriter())
-                ->writerOptions([])
-                ->data($item['barcode'])
-                ->encoding(new Encoding('UTF-8'))
-                ->size(50)
-                ->margin(2)
-                ->build();
-
-            $item['qrcode_base64'] = base64_encode($result->getString());
-        }
-
-        $data = [
-            'transaksi' => $transaksi
-        ];
-
-        $options = new \Dompdf\Options();
-        $options->set('isRemoteEnabled', true);
-
-        $dompdf = new \Dompdf\Dompdf($options);
-        $dompdf->loadHtml(view('transaksi/print_label_kayu', $data));
-        $dompdf->setPaper([0, 0, 210, 297], 'portrait');
-        $dompdf->render();
-        $dompdf->stream('label-kayu-' . $transaksi['kode_transaksi'] . '.pdf', [
-            'Attachment' => false
-        ]);
+{
+    $transaksi = $this->transaksiModel->getTransaksiWithDetails($id_transaksi);
+    if (!$transaksi) {
+        throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
     }
+
+    // Generate QR Code untuk setiap item
+    foreach ($transaksi['detail'] as &$item) {
+        $result = Builder::create()
+            ->writer(new PngWriter())
+            ->writerOptions([])
+            ->data($item['barcode'])
+            ->encoding(new Encoding('UTF-8'))
+            ->size(50)
+            ->margin(2)
+            ->build();
+
+        $item['qrcode_base64'] = base64_encode($result->getString());
+    }
+
+    $data = [
+        'transaksi' => $transaksi
+    ];
+
+    // Konfigurasi Dompdf
+    $options = new \Dompdf\Options();
+    $options->set('isRemoteEnabled', true);
+    $options->set('isHtml5ParserEnabled', true);
+    $options->set('defaultFont', 'Helvetica');
+
+    $dompdf = new \Dompdf\Dompdf($options);
+    $dompdf->loadHtml(view('transaksi/print_label_kayu', $data));
+    $dompdf->setPaper([0, 0, 210, 297], 'portrait');
+    $dompdf->render();
+
+    // Ambil output PDF
+    $pdfOutput = $dompdf->output();
+    
+    // Return dengan Response Object CodeIgniter 4
+    return $this->response
+        ->setContentType('application/pdf')
+        ->setHeader('Content-Disposition', 'inline; filename="label-kayu-' . $transaksi['kode_transaksi'] . '.pdf"')
+        ->setHeader('Content-Length', (string) strlen($pdfOutput))
+        ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0')
+        ->setHeader('Pragma', 'no-cache')
+        ->setHeader('Expires', '0')
+        ->setBody($pdfOutput);
+}
     // public function printLabelKayu($id_transaksi)
     // {
     //     $transaksi = $this->transaksiModel->getTransaksiWithDetails($id_transaksi);
