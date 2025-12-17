@@ -393,6 +393,8 @@ public function getDetailByKode($kode_transaksi)
     
 public function print($id)
 {
+    header('Content-Type: application/pdf');
+    header('Cache-Control: private, max-age=0, must-revalidate');
     $transaksi = $this->transaksiModel->select('transaksi.*, g1.nama_gudang as gudang_asal, g2.nama_gudang as gudang_tujuan, u.nama_lengkap as operator')
         ->join('gudang g1', 'g1.id_gudang = transaksi.id_gudang_asal', 'left')
         ->join('gudang g2', 'g2.id_gudang = transaksi.id_gudang_tujuan', 'left')

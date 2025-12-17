@@ -76,6 +76,8 @@ class Laporan extends BaseController
 
     public function printLaporan($type)
     {
+        header('Content-Type: application/pdf');
+        header('Cache-Control: private, max-age=0, must-revalidate');
         $method = $type;
         if (!method_exists($this, $method)) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();

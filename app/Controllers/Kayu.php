@@ -183,6 +183,8 @@ class Kayu extends BaseController
 
 public function printBarcode($id)
 {
+    header('Content-Type: application/pdf');
+    header('Cache-Control: private, max-age=0, must-revalidate');
     $kayu = $this->kayuModel->getKayu($id);
     if (!$kayu) {
         throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
@@ -217,6 +219,8 @@ public function printBarcode($id)
 }
 public function printBarcodeBatch($ids)
 {
+    header('Content-Type: application/pdf');
+    header('Cache-Control: private, max-age=0, must-revalidate');
     $kayuList = [];
     $barcode = new \Picqer\Barcode\BarcodeGeneratorPNG();
     
@@ -243,6 +247,8 @@ public function printBarcodeBatch($ids)
 }
 public function printQrCode($id)
 {
+    header('Content-Type: application/pdf');
+    header('Cache-Control: private, max-age=0, must-revalidate');
     $kayu = $this->kayuModel->getKayu($id);
     if (!$kayu) {
         throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
