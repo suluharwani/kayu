@@ -183,14 +183,14 @@ class Kayu extends BaseController
 
 public function printBarcode($id)
 {
-    header('Content-Type: application/pdf');
-    header('Cache-Control: private, max-age=0, must-revalidate');
+    // Ambil data kayu
     $kayu = $this->kayuModel->getKayu($id);
+    
     if (!$kayu) {
         throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
     }
 
-    // Generate barcode image langsung (tanpa melalui route terpisah)
+    // Generate barcode image
     $barcode = new \Picqer\Barcode\BarcodeGeneratorPNG();
     $barcodeImage = 'data:image/png;base64,' . base64_encode(
         $barcode->getBarcode($kayu['barcode'], $barcode::TYPE_CODE_128, 2, 50)
@@ -201,26 +201,35 @@ public function printBarcode($id)
         'barcodeImage' => $barcodeImage
     ];
     
-    // Setup DOMPDF dengan opsi yang lebih baik
+    // Konfigurasi Dompdf
     $options = new \Dompdf\Options();
     $options->set('isRemoteEnabled', true);
     $options->set('isHtml5ParserEnabled', true);
-    
+    $options->set('defaultFont', 'helvetica');
+
     $dompdf = new \Dompdf\Dompdf($options);
     $dompdf->loadHtml(view('kayu/print_barcode', $data));
     
-    // Set ukuran kertas khusus untuk label (misalnya: 3x2 inci)
+    // Set ukuran kertas untuk label (3x2 inci)
     $dompdf->setPaper([0, 0, 216, 144], 'portrait'); // 3x2 inci dalam points (72pt per inci)
     
     $dompdf->render();
-    $dompdf->stream('barcode-'.$kayu['kode_kayu'].'.pdf', [
-        'Attachment' => false // false untuk preview di browser, true untuk download otomatis
-    ]);
+
+    // Ambil output PDF
+    $pdfOutput = $dompdf->output();
+    
+    // Return dengan Response Object
+    return $this->response
+        ->setContentType('application/pdf')
+        ->setHeader('Content-Disposition', 'inline; filename="barcode-' . $kayu['kode_kayu'] . '.pdf"')
+        ->setHeader('Content-Length', (string) strlen($pdfOutput))
+        ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        ->setHeader('Pragma', 'no-cache')
+        ->setHeader('Expires', 'Sat, 26 Jul 1997 05:00:00 GMT')
+        ->setBody($pdfOutput);
 }
 public function printBarcodeBatch($ids)
 {
-    header('Content-Type: application/pdf');
-    header('Cache-Control: private, max-age=0, must-revalidate');
     $kayuList = [];
     $barcode = new \Picqer\Barcode\BarcodeGeneratorPNG();
     
@@ -234,33 +243,54 @@ public function printBarcodeBatch($ids)
         }
     }
     
+    // Validasi jika tidak ada data
+    if (empty($kayuList)) {
+        throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+    }
+    
     $data = ['kayuList' => $kayuList];
     
     $options = new \Dompdf\Options();
     $options->set('isRemoteEnabled', true);
+    $options->set('isHtml5ParserEnabled', true);
+    $options->set('defaultFont', 'helvetica');
     
     $dompdf = new \Dompdf\Dompdf($options);
     $dompdf->loadHtml(view('kayu/print_barcode_batch', $data));
     $dompdf->setPaper('A4', 'portrait');
     $dompdf->render();
-    $dompdf->stream('barcodes.pdf');
+
+    // Ambil output PDF
+    $pdfOutput = $dompdf->output();
+    
+    // Generate nama file
+    $filename = 'barcode-batch-' . date('Ymd-His') . '.pdf';
+    
+    // Return dengan Response Object
+    return $this->response
+        ->setContentType('application/pdf')
+        ->setHeader('Content-Disposition', 'inline; filename="' . $filename . '"')
+        ->setHeader('Content-Length', (string) strlen($pdfOutput))
+        ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        ->setHeader('Pragma', 'no-cache')
+        ->setHeader('Expires', 'Sat, 26 Jul 1997 05:00:00 GMT')
+        ->setBody($pdfOutput);
 }
 public function printQrCode($id)
 {
-    header('Content-Type: application/pdf');
-    header('Cache-Control: private, max-age=0, must-revalidate');
+    // Ambil data kayu
     $kayu = $this->kayuModel->getKayu($id);
+    
     if (!$kayu) {
         throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
     }
 
-    // Generate QR Code dengan format yang lebih sederhana
+    // Generate QR Code
     $qrCode = Builder::create()
         ->writer(new PngWriter())
-        ->data($kayu['kode_kayu']
-        )
+        ->data($kayu['kode_kayu'])
         ->encoding(new Encoding('UTF-8'))
-        ->size(150) // Ukuran lebih kecil untuk label
+        ->size(150)
         ->margin(2)
         ->build();
 
@@ -269,19 +299,30 @@ public function printQrCode($id)
         'qrcode_base64' => base64_encode($qrCode->getString())
     ];
 
-    // PDF Generation dengan ukuran label
+    // Konfigurasi Dompdf
     $options = new \Dompdf\Options();
     $options->set('isRemoteEnabled', true);
     $options->set('isHtml5ParserEnabled', true);
+    $options->set('defaultFont', 'helvetica');
 
-     $dompdf = new \Dompdf\Dompdf($options);
-        $dompdf->loadHtml(view('kayu/print_qrcode', $data));
-        $dompdf->setPaper([0, 0, 210, 297], 'portrait');
-        $dompdf->render();
-        $dompdf->stream('label-kayu-' . $kayu['kode_kayu'] . '.pdf', [
-            'Attachment' => false
-        ]);
+    $dompdf = new \Dompdf\Dompdf($options);
+    $dompdf->loadHtml(view('kayu/print_qrcode', $data));
+    $dompdf->setPaper([0, 0, 210, 297], 'portrait');
+    $dompdf->render();
 
+    // Ambil output PDF
+    $pdfOutput = $dompdf->output();
+    
+    // Return dengan Response Object
+    return $this->response
+        ->setContentType('application/pdf')
+        ->setHeader('Content-Disposition', 'inline; filename="label-kayu-' . $kayu['kode_kayu'] . '.pdf"')
+        ->setHeader('Content-Length', (string) strlen($pdfOutput))
+        ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        ->setHeader('Pragma', 'no-cache')
+        ->setHeader('Expires', 'Sat, 26 Jul 1997 05:00:00 GMT')
+        ->setHeader('Last-Modified', gmdate('D, d M Y H:i:s') . ' GMT')
+        ->setBody($pdfOutput);
 }
 
 public function printQrCodeBatch($ids)
@@ -308,15 +349,38 @@ public function printQrCodeBatch($ids)
         }
     }
 
+    // Jika tidak ada data yang valid
+    if (empty($kayuList)) {
+        throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+    }
+
     // Rest of the PDF generation remains the same
     $data = ['kayuList' => $kayuList];
     $options = new \Dompdf\Options();
     $options->set('isRemoteEnabled', true);
+    $options->set('isHtml5ParserEnabled', true);
+    $options->set('defaultFont', 'helvetica');
     
     $dompdf = new \Dompdf\Dompdf($options);
     $dompdf->loadHtml(view('kayu/print_qrcode_batch', $data));
     $dompdf->setPaper('A4', 'portrait');
     $dompdf->render();
-    $dompdf->stream('qrcodes.pdf');
+
+    // Ambil output PDF
+    $pdfOutput = $dompdf->output();
+    
+    // Generate nama file berdasarkan jumlah dan kode kayu
+    $filename = 'qrcode-batch-' . date('Ymd-His') . '.pdf';
+    
+    // Return dengan response object
+    return $this->response
+        ->setContentType('application/pdf')
+        ->setHeader('Content-Disposition', 'inline; filename="' . $filename . '"')
+        ->setHeader('Content-Length', (string) strlen($pdfOutput))
+        ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        ->setHeader('Pragma', 'no-cache')
+        ->setHeader('Expires', 'Sat, 26 Jul 1997 05:00:00 GMT')
+        ->setHeader('Last-Modified', gmdate('D, d M Y H:i:s') . ' GMT')
+        ->setBody($pdfOutput);
 }
 }

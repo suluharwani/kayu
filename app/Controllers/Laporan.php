@@ -74,23 +74,36 @@ class Laporan extends BaseController
         return view('laporan/mutasi', $data);
     }
 
-    public function printLaporan($type)
-    {
-        header('Content-Type: application/pdf');
-        header('Cache-Control: private, max-age=0, must-revalidate');
-        $method = $type;
-        if (!method_exists($this, $method)) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
-        }
-
-        $html = $this->$method();
-        
-        $dompdf = new \Dompdf\Dompdf();
-        $dompdf->loadHtml($html);
-        $dompdf->setPaper('A4', 'landscape');
-        $dompdf->render();
-        $dompdf->stream("laporan-{$type}.pdf", ['Attachment' => false]);
+   public function printLaporan($type)
+{
+    // Cek apakah method ada
+    $method = $type;
+    if (!method_exists($this, $method)) {
+        throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
     }
+
+    // Ambil HTML dari method yang ditentukan
+    $html = $this->$method();
+    
+    // Konfigurasi Dompdf
+    $dompdf = new \Dompdf\Dompdf();
+    $dompdf->loadHtml($html);
+    $dompdf->setPaper('A4', 'landscape');
+    $dompdf->render();
+
+    // Ambil output PDF
+    $pdfOutput = $dompdf->output();
+    
+    // Kembalikan sebagai response PDF dengan header yang benar
+    return $this->response
+        ->setContentType('application/pdf')
+        ->setHeader('Content-Disposition', 'inline; filename="laporan-' . $type . '.pdf"')
+        ->setHeader('Content-Length', (string) strlen($pdfOutput))
+        ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        ->setHeader('Pragma', 'no-cache')
+        ->setHeader('Expires', 'Sat, 26 Jul 1997 05:00:00 GMT')
+        ->setBody($pdfOutput);
+}
     private function transaksiPdf()
 {
     $start_date = $this->request->getGet('start_date') ?? date('Y-m-01');
