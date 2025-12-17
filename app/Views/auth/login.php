@@ -10,10 +10,10 @@
             <p class="login-box-msg">Silakan login untuk memulai sesi</p>
 
             <?php if(session()->getFlashdata('error')): ?>
-                <div class="alert alert-danger">
-                    <?= session()->getFlashdata('error'); ?>
-                </div>
-            <?php endif; ?>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <?= session()->getFlashdata('error'); ?>
+    </div>
+<?php endif; ?>
 
             <?php if(session()->getFlashdata('errors')): ?>
                 <div class="alert alert-danger">

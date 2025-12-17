@@ -6,7 +6,7 @@ class UserModel extends Model
 {
     protected $table = 'users';
     protected $primaryKey = 'id';
-    protected $allowedFields = ['id','username', 'password', 'nama_lengkap', 'role', 'last_login'];
+    protected $allowedFields = ['id', 'username', 'password', 'nama_lengkap', 'role', 'last_login', 'status'];
     protected $useTimestamps = true;
     
     protected $beforeInsert = ['hashPassword'];
@@ -27,7 +27,6 @@ class UserModel extends Model
         return $this->where('username', $username)->first();
     }
     
-
     public function validateRegistration($data)
     {
         $this->validation->setRules([
@@ -38,5 +37,11 @@ class UserModel extends Model
         ]);
         
         return $this->validation->run($data);
+    }
+    
+    // Method untuk mengubah status pengguna
+    public function updateStatus($id, $status)
+    {
+        return $this->update($id, ['status' => $status]);
     }
 }

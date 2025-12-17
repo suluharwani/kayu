@@ -10,7 +10,8 @@ class Auth extends BaseController
     {
         $this->userModel = new UserModel();
     }
-        public function register()
+    
+    public function register()
     {
         if (session()->get('logged_in')) {
             return redirect()->to('/dashboard');
@@ -45,24 +46,26 @@ class Auth extends BaseController
             'username' => $this->request->getVar('username'),
             'password' => $this->request->getVar('password'),
             'nama_lengkap' => $this->request->getVar('nama_lengkap'),
-            'role' => $role
+            'role' => $role,
+            'status' => 'pending' // Status default pending
         ]);
 
-        return redirect()->to('/login')->with('message', 'Registrasi berhasil! Silakan login.');
+        return redirect()->to('/login')->with('message', 'Registrasi berhasil! Silakan tunggu aktivasi dari admin.');
     }
+    
     public function login()
-{
-    // Jika sudah login, redirect ke dashboard
-    if (session()->get('logged_in')) {
-        return redirect()->to('/dashboard');
-    }
+    {
+        // Jika sudah login, redirect ke dashboard
+        if (session()->get('logged_in')) {
+            return redirect()->to('/dashboard');
+        }
 
-    $data = [
-        'title' => 'Login - Sistem Manajemen Kayu',
-        'validation' => \Config\Services::validation()
-    ];
-    return view('auth/login', $data);
-}
+        $data = [
+            'title' => 'Login - Sistem Manajemen Kayu',
+            'validation' => \Config\Services::validation()
+        ];
+        return view('auth/login', $data);
+    }
     
     public function attemptLogin()
     {
@@ -84,11 +87,28 @@ class Auth extends BaseController
             return redirect()->to('/login')->withInput()->with('error', 'Username atau password salah');
         }
         
+        // Validasi status akun
+        if ($user['status'] != 'active') {
+            $statusMessage = '';
+            switch($user['status']) {
+                case 'pending':
+                    $statusMessage = 'Akun Anda menunggu aktivasi dari admin.';
+                    break;
+                case 'inactive':
+                    $statusMessage = 'Akun Anda dinonaktifkan. Hubungi administrator.';
+                    break;
+                default:
+                    $statusMessage = 'Akun Anda tidak aktif.';
+            }
+            return redirect()->to('/login')->withInput()->with('error', $statusMessage);
+        }
+        
         $sessionData = [
             'id_user' => $user['id'],
             'username' => $user['username'],
             'nama_lengkap' => $user['nama_lengkap'],
             'role' => $user['role'],
+            'status' => $user['status'],
             'logged_in' => true
         ];
         
