@@ -84,39 +84,56 @@ public function getDetailByKode($kode_transaksi)
     
 
     public function printLabelTransaksi($id_transaksi)
-    {
-        header('Content-Type: application/pdf');
-        header('Cache-Control: private, max-age=0, must-revalidate');
-        $transaksi = $this->transaksiModel->getTransaksiWithDetails($id_transaksi);
-        if (!$transaksi) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
-        }
-
-        $qrCode =Builder::create()
-    ->writer(new PngWriter())
-    ->data('TRANSAKSI-' . $transaksi['kode_transaksi'])
-    ->encoding(new Encoding('UTF-8'))
-    ->size(150)
-    ->margin(10)
-    ->build();
-
-        $data = [
-            'transaksi' => $transaksi,
-            'qrCode' => base64_encode($qrCode->getString())
-        ];
-
-        $options = new \Dompdf\Options();
-        $options->set('isRemoteEnabled', true);
-
-        $dompdf = new \Dompdf\Dompdf($options);
-        $dompdf->loadHtml(view('transaksi/print_label', $data));
-        $dompdf->setPaper('A5', 'landscape');
-        $dompdf->render();
-
-        $dompdf->stream('label-transaksi-' . $transaksi['kode_transaksi'] . '.pdf', [
-            'Attachment' => false
-        ]);
+{
+    // Ambil data transaksi
+    $transaksi = $this->transaksiModel->getTransaksiWithDetails($id_transaksi);
+    
+    if (!$transaksi) {
+        throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
     }
+
+    // Generate QR Code
+    $qrCode = Builder::create()
+        ->writer(new PngWriter())
+        ->data('TRANSAKSI-' . $transaksi['kode_transaksi'])
+        ->encoding(new Encoding('UTF-8'))
+        ->size(150)
+        ->margin(10)
+        ->build();
+
+    // Siapkan data untuk view
+    $data = [
+        'transaksi' => $transaksi,
+        'qrCode' => base64_encode($qrCode->getString())
+    ];
+
+    // Konfigurasi Dompdf
+    $options = new \Dompdf\Options();
+    $options->set('isRemoteEnabled', true);
+    $options->set('isHtml5ParserEnabled', true);
+    $options->set('defaultFont', 'helvetica');
+
+    // Generate PDF
+    $dompdf = new \Dompdf\Dompdf($options);
+    $dompdf->loadHtml(view('transaksi/print_label', $data));
+    $dompdf->setPaper('A5', 'landscape');
+    $dompdf->render();
+
+    // Ambil output PDF
+    $pdfOutput = $dompdf->output();
+    
+    // Kembalikan sebagai response PDF
+    return $this->response
+        ->setContentType('application/pdf')
+        ->setHeader('Content-Disposition', 'inline; filename="label-transaksi-' . $transaksi['kode_transaksi'] . '.pdf"')
+        ->setHeader('Content-Length', (string) strlen($pdfOutput))
+        ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        ->setHeader('Cache-Control', 'post-check=0, pre-check=0', false)
+        ->setHeader('Pragma', 'no-cache')
+        ->setHeader('Expires', 'Sat, 26 Jul 1997 05:00:00 GMT')
+        ->setHeader('Last-Modified', gmdate('D, d M Y H:i:s') . ' GMT')
+        ->setBody($pdfOutput);
+}
 
     public function printLabelKayu($id_transaksi)
 {
@@ -167,31 +184,7 @@ public function getDetailByKode($kode_transaksi)
         ->setHeader('Expires', '0')
         ->setBody($pdfOutput);
 }
-    // public function printLabelKayu($id_transaksi)
-    // {
-    //     $transaksi = $this->transaksiModel->getTransaksiWithDetails($id_transaksi);
-    //     if (!$transaksi) {
-    //         throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
-    //     }
 
-    //     $data = [
-    //         'transaksi' => $transaksi,
-    //         'barcodeGenerator' => new \Picqer\Barcode\BarcodeGeneratorPNG()
-    //     ];
-    //     // var_dump($data);
-    //     // die();
-    //     $options = new \Dompdf\Options();
-    //     $options->set('isRemoteEnabled', true);
-        
-    //     $dompdf = new \Dompdf\Dompdf($options);
-    //     $dompdf->loadHtml(view('transaksi/print_label_kayu', $data));
-    //     $dompdf->setPaper([0, 0, 800, 500], 'portrait'); // Ukuran label kecil
-        
-    //     $dompdf->render();
-    //     $dompdf->stream('label-kayu-'.$transaksi['kode_transaksi'].'.pdf', [
-    //         'Attachment' => false
-    //     ]);
-    // }
     public function createMasuk()
     {
         $data = [
@@ -409,18 +402,19 @@ public function getDetailByKode($kode_transaksi)
     
 public function print($id)
 {
-    header('Content-Type: application/pdf');
-    header('Cache-Control: private, max-age=0, must-revalidate');
-    $transaksi = $this->transaksiModel->select('transaksi.*, g1.nama_gudang as gudang_asal, g2.nama_gudang as gudang_tujuan, u.nama_lengkap as operator')
+    // Ambil data transaksi dengan join
+    $transaksi = $this->transaksiModel
+        ->select('transaksi.*, g1.nama_gudang as gudang_asal, g2.nama_gudang as gudang_tujuan, u.nama_lengkap as operator')
         ->join('gudang g1', 'g1.id_gudang = transaksi.id_gudang_asal', 'left')
         ->join('gudang g2', 'g2.id_gudang = transaksi.id_gudang_tujuan', 'left')
         ->join('users u', 'u.id = transaksi.created_by', 'left')
         ->find($id);
 
-    if(!$transaksi) {
+    if (!$transaksi) {
         throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
     }
 
+    // Ambil detail transaksi
     $detail = $this->transaksiModel->getDetailTransaksi($id);
 
     $data = [
@@ -428,14 +422,30 @@ public function print($id)
         'detail' => $detail
     ];
 
-    // Load DomPDF library
-    $dompdf = new \Dompdf\Dompdf();
+    // Konfigurasi Dompdf
+    $options = new \Dompdf\Options();
+    $options->set('isRemoteEnabled', true);
+    $options->set('isHtml5ParserEnabled', true);
+    $options->set('defaultFont', 'helvetica');
+
+    $dompdf = new \Dompdf\Dompdf($options);
     $dompdf->loadHtml(view('transaksi/print', $data));
     $dompdf->setPaper('A4', 'portrait');
     $dompdf->render();
-    
-    // Output the generated PDF
-    $dompdf->stream('transaksi-'.$transaksi['kode_transaksi'].'.pdf', ['Attachment' => false]);
+
+    // Ambil output PDF
+    $pdfOutput = $dompdf->output();
+
+    // Return dengan Response Object
+    return $this->response
+        ->setContentType('application/pdf')
+        ->setHeader('Content-Disposition', 'inline; filename="transaksi-' . $transaksi['kode_transaksi'] . '.pdf"')
+        ->setHeader('Content-Length', (string) strlen($pdfOutput))
+        ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        ->setHeader('Cache-Control', 'post-check=0, pre-check=0', false)
+        ->setHeader('Pragma', 'no-cache')
+        ->setHeader('Expires', 'Sat, 26 Jul 1997 05:00:00 GMT')
+        ->setBody($pdfOutput);
 }
     public function createKeluar()
 {
