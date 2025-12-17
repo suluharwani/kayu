@@ -85,6 +85,8 @@ public function getDetailByKode($kode_transaksi)
 
     public function printLabelTransaksi($id_transaksi)
     {
+        header('Content-Type: application/pdf');
+        header('Cache-Control: private, max-age=0, must-revalidate');
         $transaksi = $this->transaksiModel->getTransaksiWithDetails($id_transaksi);
         if (!$transaksi) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
@@ -118,6 +120,8 @@ public function getDetailByKode($kode_transaksi)
 
     public function printLabelKayu($id_transaksi)
     {
+        header('Content-Type: application/pdf');
+        header('Cache-Control: private, max-age=0, must-revalidate');
         $transaksi = $this->transaksiModel->getTransaksiWithDetails($id_transaksi);
         if (!$transaksi) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
